@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Check, X, Trophy, RotateCcw } from 'lucide-react';
 
-const DIRECTUS_URL = 'http://luminar-edu.nl';
+const DIRECTUS_URL = 'https://luminar-edu.nl';
 
 const LuminarLearningApp = () => {
   const [stage, setStage] = useState('language-select');
