@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Check, X, Trophy, RotateCcw } from 'lucide-react';
 
-const DIRECTUS_URL = 'https://luminar-edu.nl';
+const DIRECTUS_URL = 'http://luminar-edu.nl';
 
 const LuminarLearningApp = () => {
   const [stage, setStage] = useState('language-select');
@@ -13,13 +13,11 @@ const LuminarLearningApp = () => {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [answers, setAnswers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
-  const [settings, setSettings] = useState(null);
-
-  const defaultSettings = {
-    site_title: "Luminar",
-    site_subtitle: "luminar test",
+  const [settings, setSettings] = useState({
+    site_title: "Luminar Learning",
+    site_subtitle: "Select your language and start your journey",
     primary_color: "#3b82f6",
     secondary_color: "#a855f7",
     accent_color: "#ec4899",
@@ -63,21 +61,26 @@ const LuminarLearningApp = () => {
     trophy_icon_color: "#fbbf24",
     test_complete_title: "Test Complete!",
     restart_button_text: "Try Another Language"
-  };
-
-  const s = settings || defaultSettings;
+  });
 
   useEffect(() => {
-    fetchSettings();
-    fetchLanguages();
+    const loadData = async () => {
+      await fetchSettings();
+      await fetchLanguages();
+    };
+    loadData();
   }, []);
 
   const fetchSettings = async () => {
     try {
       const response = await fetch(`${DIRECTUS_URL}/items/site_settings`);
       const data = await response.json();
-      if (data.data) {
-        setSettings({ ...defaultSettings, ...data.data });
+      
+      if (data && data.data) {
+        setSettings(prev => ({ ...prev, ...data.data }));
+        console.log('Settings loaded:', data.data);
+      } else {
+        console.log('No settings found, using defaults');
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -87,11 +90,19 @@ const LuminarLearningApp = () => {
   const fetchLanguages = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${DIRECTUS_URL}/items/languages?filter[status][_eq]=published&sort=sort_order`);
+      const response = await fetch(`${DIRECTUS_URL}/items/languages?filter[status][_eq]=published`);
       const data = await response.json();
-      setLanguages(data.data || []);
+      
+      if (data && data.data) {
+        setLanguages(data.data);
+        console.log('Languages loaded:', data.data);
+      } else {
+        console.log('No languages found');
+        setLanguages([]);
+      }
     } catch (error) {
       console.error('Error fetching languages:', error);
+      setLanguages([]);
     } finally {
       setLoading(false);
     }
@@ -100,16 +111,25 @@ const LuminarLearningApp = () => {
   const fetchWords = async (languageId) => {
     try {
       setLoading(true);
+      const limit = settings.questions_per_test || 10;
       const response = await fetch(
-        `${DIRECTUS_URL}/items/words?filter[language][_eq]=${languageId}&filter[status][_eq]=published&limit=${s.questions_per_test}`
+        `${DIRECTUS_URL}/items/words?filter[language][_eq]=${languageId}&filter[status][_eq]=published&limit=${limit}`
       );
       const data = await response.json();
-      const shuffled = (data.data || []).sort(() => Math.random() - 0.5);
-      setWords(shuffled);
-      setStage('test');
+      
+      if (data && data.data && data.data.length > 0) {
+        const shuffled = [...data.data].sort(() => Math.random() - 0.5);
+        setWords(shuffled);
+        setStage('test');
+        console.log('Words loaded:', shuffled.length);
+      } else {
+        alert('No words found for this language. Please add words in Directus.');
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error fetching words:', error);
-      alert('Failed to load words.');
+      alert('Failed to load words. Please check your Directus setup.');
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -141,7 +161,7 @@ const LuminarLearningApp = () => {
         setStage('results');
         setFeedback(null);
       }
-    }, s.feedback_duration);
+    }, settings.feedback_duration);
   };
 
   const handleRestart = () => {
@@ -157,12 +177,12 @@ const LuminarLearningApp = () => {
   const correctCount = answers.filter(a => a.isCorrect).length;
   const incorrectCount = answers.length - correctCount;
 
-  const bgGradient = `linear-gradient(to bottom right, ${s.background_color_1}, ${s.background_color_2}, ${s.background_color_3})`;
+  const bgGradient = `linear-gradient(to bottom right, ${settings.background_color_1}, ${settings.background_color_2}, ${settings.background_color_3})`;
 
   const customStyles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Poppins:wght@300;400;600;700;800;900&display=swap');
     
-    * { font-family: '${s.font_family}', sans-serif; }
+    * { font-family: '${settings.font_family}', sans-serif; }
     
     @keyframes fade-in {
       from { opacity: 0; transform: translateY(10px); }
@@ -178,7 +198,7 @@ const LuminarLearningApp = () => {
     .custom-scrollbar::-webkit-scrollbar { width: 8px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { 
-      background: linear-gradient(to bottom, ${s.primary_color}, ${s.secondary_color}); 
+      background: linear-gradient(to bottom, ${settings.primary_color}, ${settings.secondary_color}); 
       border-radius: 10px; 
     }
   `;
@@ -187,29 +207,29 @@ const LuminarLearningApp = () => {
     return (
       <>
         <style>{customStyles}</style>
-        <div className={`min-h-screen ${s.padding}`} style={{ background: bgGradient }}>
-          <div className={`${s.max_width} mx-auto`}>
-            <div className={`text-center ${s.header_margin_bottom} ${s.enable_animations ? 'animate-fade-in' : ''}`}>
+        <div className={`min-h-screen ${settings.padding}`} style={{ background: bgGradient }}>
+          <div className={`${settings.max_width} mx-auto`}>
+            <div className={`text-center ${settings.header_margin_bottom} ${settings.enable_animations ? 'animate-fade-in' : ''}`}>
               <div className="flex items-center justify-center mb-6">
                 <div className="relative">
                   <div 
                     className="absolute inset-0 rounded-full blur-xl opacity-50"
                     style={{ 
-                      background: `linear-gradient(to right, ${s.primary_color}, ${s.secondary_color})`,
-                      animation: s.enable_animations ? 'pulse 2s infinite' : 'none'
+                      background: `linear-gradient(to right, ${settings.primary_color}, ${settings.secondary_color})`,
+                      animation: settings.enable_animations ? 'pulse 2s infinite' : 'none'
                     }}
                   ></div>
-                  <BookOpen className="w-20 h-20 relative z-10" style={{ color: s.text_color }} />
+                  <BookOpen className="w-20 h-20 relative z-10" style={{ color: settings.text_color }} />
                 </div>
               </div>
               <h1 
-                className={`${s.title_font_size} sm:text-7xl font-black mb-4 tracking-tight`}
-                style={{ color: s.text_color }}
+                className={`${settings.title_font_size} sm:text-7xl font-black mb-4 tracking-tight`}
+                style={{ color: settings.text_color }}
               >
-                {s.site_title}
+                {settings.site_title}
               </h1>
-              <p className={`${s.subtitle_font_size} sm:text-2xl font-light`} style={{ color: s.subtitle_color }}>
-                {s.site_subtitle}
+              <p className={`${settings.subtitle_font_size} sm:text-2xl font-light`} style={{ color: settings.subtitle_color }}>
+                {settings.site_subtitle}
               </p>
             </div>
 
@@ -218,48 +238,66 @@ const LuminarLearningApp = () => {
                 <div className="relative inline-block">
                   <div 
                     className="rounded-full h-16 w-16 border-4 border-t-transparent animate-spin"
-                    style={{ borderColor: s.secondary_color }}
+                    style={{ borderColor: settings.secondary_color }}
                   ></div>
                 </div>
-                <p className="mt-6 text-lg" style={{ color: s.subtitle_color }}>Loading languages...</p>
+                <p className="mt-6 text-lg" style={{ color: settings.subtitle_color }}>Loading languages...</p>
+              </div>
+            ) : languages.length === 0 ? (
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-8 text-center">
+                <p className="mb-4 text-lg" style={{ color: settings.subtitle_color }}>
+                  No languages found. Please add languages in Directus.
+                </p>
+                <a
+                  href={`${DIRECTUS_URL}/admin`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-6 py-3 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
+                  style={{ 
+                    background: `linear-gradient(to right, ${settings.primary_color}, ${settings.secondary_color})`,
+                    color: settings.text_color
+                  }}
+                >
+                  Go to Directus Admin
+                </a>
               </div>
             ) : (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${s.gap_between_cards}`}>
+              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${settings.gap_between_cards}`}>
                 {languages.map((language, index) => (
                   <button
                     key={language.id}
                     onClick={() => handleLanguageSelect(language)}
                     style={{ 
-                      animationDelay: s.enable_animations ? `${index * s.card_animation_delay}ms` : '0ms',
-                      backgroundColor: s.card_background_color,
-                      borderColor: s.card_border_color,
-                      borderWidth: s.card_border_width,
-                      borderRadius: s.card_border_radius,
-                      padding: s.card_padding,
-                      boxShadow: s.card_shadow,
-                      transitionDuration: s.hover_transition_duration,
+                      animationDelay: settings.enable_animations ? `${index * settings.card_animation_delay}ms` : '0ms',
+                      backgroundColor: settings.card_background_color,
+                      borderColor: settings.card_border_color,
+                      borderWidth: settings.card_border_width,
+                      borderRadius: settings.card_border_radius,
+                      padding: settings.card_padding,
+                      boxShadow: settings.card_shadow,
+                      transitionDuration: settings.hover_transition_duration,
                     }}
-                    className={`group relative backdrop-blur-lg border transform transition-all ${s.enable_animations ? 'animate-slide-up' : ''}`}
+                    className={`group relative backdrop-blur-lg border transform transition-all ${settings.enable_animations ? 'animate-slide-up' : ''}`}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = `scale(${s.card_hover_scale}) translateY(-8px)`;
-                      e.currentTarget.style.boxShadow = s.card_hover_shadow;
+                      e.currentTarget.style.transform = `scale(${settings.card_hover_scale}) translateY(-8px)`;
+                      e.currentTarget.style.boxShadow = settings.card_hover_shadow;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'scale(1) translateY(0)';
-                      e.currentTarget.style.boxShadow = s.card_shadow;
+                      e.currentTarget.style.boxShadow = settings.card_shadow;
                     }}
                   >
                     <div className="relative z-10">
-                      <div className={`${s.language_icon_size} mb-6 transition-transform duration-300 group-hover:scale-110`}>
+                      <div className={`${settings.language_icon_size} mb-6 transition-transform duration-300 group-hover:scale-110`}>
                         🌐
                       </div>
                       <h3 
                         className="text-3xl font-bold mb-2"
-                        style={{ color: s.language_name_color }}
+                        style={{ color: settings.language_name_color }}
                       >
                         {language.name}
                       </h3>
-                      <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: s.language_code_color }}>
+                      <p className="text-sm uppercase tracking-widest font-semibold" style={{ color: settings.language_code_color }}>
                         {language.code}
                       </p>
                     </div>
@@ -282,13 +320,13 @@ const LuminarLearningApp = () => {
         <style>{customStyles}</style>
         <div className="min-h-screen p-4 sm:p-8" style={{ background: bgGradient }}>
           <div className="max-w-3xl mx-auto">
-            {s.show_progress_bar && (
+            {settings.show_progress_bar && (
               <div className="mb-8 backdrop-blur-lg bg-white/5 rounded-2xl p-6 border border-white/10">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-3xl font-bold" style={{ color: s.text_color }}>
+                  <h2 className="text-3xl font-bold" style={{ color: settings.text_color }}>
                     {selectedLanguage.name}
                   </h2>
-                  <span className="font-semibold px-4 py-2 bg-white/5 rounded-lg border border-white/10" style={{ color: s.text_color }}>
+                  <span className="font-semibold px-4 py-2 bg-white/5 rounded-lg border border-white/10" style={{ color: settings.text_color }}>
                     {currentWordIndex + 1} / {words.length}
                   </span>
                 </div>
@@ -297,7 +335,7 @@ const LuminarLearningApp = () => {
                     className="h-2 rounded-full transition-all duration-500"
                     style={{ 
                       width: `${progress}%`,
-                      background: `linear-gradient(to right, ${s.primary_color}, ${s.secondary_color})`,
+                      background: `linear-gradient(to right, ${settings.primary_color}, ${settings.secondary_color})`,
                     }}
                   ></div>
                 </div>
@@ -306,11 +344,11 @@ const LuminarLearningApp = () => {
 
             <div className="backdrop-blur-lg border border-white/10 shadow-2xl p-12 rounded-3xl bg-white/5">
               <div className="text-center mb-12">
-                <p className="mb-6 text-lg font-light tracking-wide" style={{ color: s.subtitle_color }}>
-                  {s.instruction_text}
+                <p className="mb-6 text-lg font-light tracking-wide" style={{ color: settings.subtitle_color }}>
+                  {settings.instruction_text}
                 </p>
                 <div className="relative inline-block">
-                  <h3 className={`${s.question_text_size} font-black tracking-tight`} style={{ color: s.text_color }}>
+                  <h3 className={`${settings.question_text_size} font-black tracking-tight`} style={{ color: settings.text_color }}>
                     {currentWord.word}
                   </h3>
                 </div>
@@ -325,21 +363,21 @@ const LuminarLearningApp = () => {
                   placeholder="Type your answer..."
                   disabled={feedback !== null}
                   autoFocus
-                  className={`w-full ${s.input_padding} ${s.input_text_size} ${s.input_border_radius} focus:outline-none transition-all placeholder-gray-400 disabled:cursor-not-allowed backdrop-blur-sm font-medium bg-white/5`}
+                  className={`w-full ${settings.input_padding} ${settings.input_text_size} ${settings.input_border_radius} focus:outline-none transition-all placeholder-gray-400 disabled:cursor-not-allowed backdrop-blur-sm font-medium bg-white/5`}
                   style={{ 
                     borderWidth: '2px',
-                    borderColor: feedback ? (feedback === 'correct' ? s.correct_color : s.incorrect_color) : 'rgba(255,255,255,0.2)',
-                    color: s.text_color
+                    borderColor: feedback ? (feedback === 'correct' ? settings.correct_color : settings.incorrect_color) : 'rgba(255,255,255,0.2)',
+                    color: settings.text_color
                   }}
                 />
 
                 {feedback && (
                   <div
-                    className={`p-6 ${s.button_border_radius} flex items-center justify-center space-x-4 backdrop-blur-lg border ${s.enable_animations ? 'animate-fade-in' : ''}`}
+                    className={`p-6 ${settings.button_border_radius} flex items-center justify-center space-x-4 backdrop-blur-lg border ${settings.enable_animations ? 'animate-fade-in' : ''}`}
                     style={{
-                      backgroundColor: feedback === 'correct' ? `${s.correct_color}1a` : `${s.incorrect_color}1a`,
-                      borderColor: feedback === 'correct' ? `${s.correct_color}4d` : `${s.incorrect_color}4d`,
-                      color: feedback === 'correct' ? s.correct_color : s.incorrect_color
+                      backgroundColor: feedback === 'correct' ? `${settings.correct_color}1a` : `${settings.incorrect_color}1a`,
+                      borderColor: feedback === 'correct' ? `${settings.correct_color}4d` : `${settings.incorrect_color}4d`,
+                      color: feedback === 'correct' ? settings.correct_color : settings.incorrect_color
                     }}
                   >
                     {feedback === 'correct' ? (
@@ -352,8 +390,8 @@ const LuminarLearningApp = () => {
                         <X className="w-8 h-8" />
                         <div>
                           <span className="font-bold text-xl block">Incorrect</span>
-                          <span className="text-sm" style={{ color: s.subtitle_color }}>
-                            The answer was: <span style={{ color: s.correct_color }}>{currentWord.translation}</span>
+                          <span className="text-sm" style={{ color: settings.subtitle_color }}>
+                            The answer was: <span style={{ color: settings.correct_color }}>{currentWord.translation}</span>
                           </span>
                         </div>
                       </>
@@ -364,10 +402,10 @@ const LuminarLearningApp = () => {
                 <button
                   onClick={handleSubmitAnswer}
                   disabled={!userAnswer.trim() || feedback !== null}
-                  className={`w-full py-5 ${s.button_border_radius} font-bold text-xl transition-all transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50`}
+                  className={`w-full py-5 ${settings.button_border_radius} font-bold text-xl transition-all transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50`}
                   style={{ 
-                    background: (!userAnswer.trim() || feedback !== null) ? '#4b5563' : `linear-gradient(to right, ${s.primary_color}, ${s.secondary_color})`,
-                    color: s.text_color
+                    background: (!userAnswer.trim() || feedback !== null) ? '#4b5563' : `linear-gradient(to right, ${settings.primary_color}, ${settings.secondary_color})`,
+                    color: settings.text_color
                   }}
                 >
                   Submit Answer
@@ -389,41 +427,41 @@ const LuminarLearningApp = () => {
         <div className="min-h-screen p-4 sm:p-8" style={{ background: bgGradient }}>
           <div className="max-w-4xl mx-auto">
             <div className="backdrop-blur-lg bg-white/5 rounded-3xl border border-white/10 p-8 sm:p-12 shadow-2xl">
-              <div className={`text-center mb-12 ${s.enable_animations ? 'animate-fade-in' : ''}`}>
-                <Trophy className="w-24 h-24 mx-auto mb-6" style={{ color: s.trophy_icon_color }} />
-                <h2 className="text-6xl font-black mb-6 tracking-tight" style={{ color: s.text_color }}>
-                  {s.test_complete_title}
+              <div className={`text-center mb-12 ${settings.enable_animations ? 'animate-fade-in' : ''}`}>
+                <Trophy className="w-24 h-24 mx-auto mb-6" style={{ color: settings.trophy_icon_color }} />
+                <h2 className="text-6xl font-black mb-6 tracking-tight" style={{ color: settings.text_color }}>
+                  {settings.test_complete_title}
                 </h2>
-                <p className="text-3xl font-bold" style={{ color: s.primary_color }}>
+                <p className="text-3xl font-bold" style={{ color: settings.primary_color }}>
                   {percentage}% Score
                 </p>
-                <p className="text-lg mt-2" style={{ color: s.subtitle_color }}>in {selectedLanguage.name}</p>
+                <p className="text-lg mt-2" style={{ color: settings.subtitle_color }}>in {selectedLanguage.name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-6 mb-10">
                 <div 
                   className="backdrop-blur-lg rounded-2xl p-8 text-center border transform hover:scale-105 transition-all"
-                  style={{ backgroundColor: `${s.correct_color}1a`, borderColor: `${s.correct_color}4d` }}
+                  style={{ backgroundColor: `${settings.correct_color}1a`, borderColor: `${settings.correct_color}4d` }}
                 >
-                  <Check className="w-16 h-16 mx-auto mb-4" style={{ color: s.correct_color }} />
-                  <p className="text-5xl font-black mb-2" style={{ color: s.correct_color }}>{correctCount}</p>
-                  <p className="text-lg font-semibold" style={{ color: s.subtitle_color }}>Correct</p>
+                  <Check className="w-16 h-16 mx-auto mb-4" style={{ color: settings.correct_color }} />
+                  <p className="text-5xl font-black mb-2" style={{ color: settings.correct_color }}>{correctCount}</p>
+                  <p className="text-lg font-semibold" style={{ color: settings.subtitle_color }}>Correct</p>
                 </div>
                 <div 
                   className="backdrop-blur-lg rounded-2xl p-8 text-center border transform hover:scale-105 transition-all"
-                  style={{ backgroundColor: `${s.incorrect_color}1a`, borderColor: `${s.incorrect_color}4d` }}
+                  style={{ backgroundColor: `${settings.incorrect_color}1a`, borderColor: `${settings.incorrect_color}4d` }}
                 >
-                  <X className="w-16 h-16 mx-auto mb-4" style={{ color: s.incorrect_color }} />
-                  <p className="text-5xl font-black mb-2" style={{ color: s.incorrect_color }}>{incorrectCount}</p>
-                  <p className="text-lg font-semibold" style={{ color: s.subtitle_color }}>Incorrect</p>
+                  <X className="w-16 h-16 mx-auto mb-4" style={{ color: settings.incorrect_color }} />
+                  <p className="text-5xl font-black mb-2" style={{ color: settings.incorrect_color }}>{incorrectCount}</p>
+                  <p className="text-lg font-semibold" style={{ color: settings.subtitle_color }}>Incorrect</p>
                 </div>
               </div>
 
               <div className="space-y-3 mb-10">
-                <h3 className="text-2xl font-bold mb-6 flex items-center" style={{ color: s.text_color }}>
+                <h3 className="text-2xl font-bold mb-6 flex items-center" style={{ color: settings.text_color }}>
                   <span 
                     className="w-1 h-8 rounded-full mr-3"
-                    style={{ background: `linear-gradient(to bottom, ${s.primary_color}, ${s.secondary_color})` }}
+                    style={{ background: `linear-gradient(to bottom, ${settings.primary_color}, ${settings.secondary_color})` }}
                   ></span>
                   Review Your Answers
                 </h3>
@@ -431,26 +469,28 @@ const LuminarLearningApp = () => {
                   {answers.map((answer, index) => (
                     <div
                       key={index}
-                      style={{ animationDelay: s.enable_animations ? `${index * 50}ms` : '0ms' }}
-                      className={`backdrop-blur-lg p-5 rounded-xl border ${s.enable_animations ? 'animate-slide-up' : ''}`}
-                      style={{
-                        backgroundColor: answer.isCorrect ? `${s.correct_color}0d` : `${s.incorrect_color}0d`,
-                        borderColor: answer.isCorrect ? `${s.correct_color}4d` : `${s.incorrect_color}4d`
-                      }}
+                      style={{ animationDelay: settings.enable_animations ? `${index * 50}ms` : '0ms' }}
+                      className={`backdrop-blur-lg p-5 rounded-xl border ${settings.enable_animations ? 'animate-slide-up' : ''}`}
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div 
+                        className="flex items-start justify-between gap-4"
+                        style={{
+                          backgroundColor: answer.isCorrect ? `${settings.correct_color}0d` : `${settings.incorrect_color}0d`,
+                          borderColor: answer.isCorrect ? `${settings.correct_color}4d` : `${settings.incorrect_color}4d`
+                        }}
+                      >
                         <div className="flex items-center gap-4 flex-1">
                           {answer.isCorrect ? (
-                            <Check className="w-6 h-6 flex-shrink-0" style={{ color: s.correct_color }} />
+                            <Check className="w-6 h-6 flex-shrink-0" style={{ color: settings.correct_color }} />
                           ) : (
-                            <X className="w-6 h-6 flex-shrink-0" style={{ color: s.incorrect_color }} />
+                            <X className="w-6 h-6 flex-shrink-0" style={{ color: settings.incorrect_color }} />
                           )}
                           <div className="flex-1">
-                            <span className="font-bold text-lg block mb-1" style={{ color: s.text_color }}>
+                            <span className="font-bold text-lg block mb-1" style={{ color: settings.text_color }}>
                               {answer.word.word}
                             </span>
-                            <span className="text-sm" style={{ color: s.subtitle_color }}>
-                              Your answer: <span style={{ color: answer.isCorrect ? s.correct_color : s.incorrect_color }}>
+                            <span className="text-sm" style={{ color: settings.subtitle_color }}>
+                              Your answer: <span style={{ color: answer.isCorrect ? settings.correct_color : settings.incorrect_color }}>
                                 {answer.userAnswer}
                               </span>
                             </span>
@@ -458,7 +498,7 @@ const LuminarLearningApp = () => {
                         </div>
                         {!answer.isCorrect && (
                           <div className="text-right">
-                            <p className="font-bold text-sm" style={{ color: s.correct_color }}>
+                            <p className="font-bold text-sm" style={{ color: settings.correct_color }}>
                               ✓ {answer.word.translation}
                             </p>
                           </div>
@@ -471,14 +511,14 @@ const LuminarLearningApp = () => {
 
               <button
                 onClick={handleRestart}
-                className={`w-full py-5 ${s.button_border_radius} font-bold text-xl transition-all transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg`}
+                className={`w-full py-5 ${settings.button_border_radius} font-bold text-xl transition-all transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg`}
                 style={{ 
-                  background: `linear-gradient(to right, ${s.primary_color}, ${s.secondary_color})`,
-                  color: s.text_color
+                  background: `linear-gradient(to right, ${settings.primary_color}, ${settings.secondary_color})`,
+                  color: settings.text_color
                 }}
               >
                 <RotateCcw className="w-6 h-6" />
-                <span>{s.restart_button_text}</span>
+                <span>{settings.restart_button_text}</span>
               </button>
             </div>
           </div>
