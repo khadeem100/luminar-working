@@ -3,13 +3,13 @@
 import client from '../lib/directus';
 import { initializeVisualEditor } from "../lib/visual-editor";
 import { readItems } from '@directus/sdk';
-import HeroSection from './components/HeroSection';
-import RichTextSection from './components/RichTextSection';
-import GallerySection from './components/GallerySection';
-import PricingSection from './components/PricingSection';
-import FormSection from './components/FormSection';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import HeroSection from '../lib/components/HeroSection';
+import RichTextSection from '../lib/components/RichTextSection';
+import GallerySection from '../lib/components/GallerySection';
+import PricingSection from '../lib/components/PricingSection';
+import FormSection from '../lib/components/FormSection';
+import Header from '../lib/components/Header';
+import Footer from '../lib/components/Footer';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
