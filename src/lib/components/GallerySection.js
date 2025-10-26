@@ -1,10 +1,10 @@
 "use client";
-// Add the following import
+
 import { setAttr } from '../../lib/visual-editor.js';
 
 import Image from 'next/image';
 
-// Add `id` in the list of destructured props
+
 export default function GallerySection({ id, tagline, headline, items = [] }) {
   if (!items || items.length === 0) {
     return null;
@@ -15,7 +15,7 @@ export default function GallerySection({ id, tagline, headline, items = [] }) {
       <div className="container">
         {tagline && <p 
           className="tagline" 
-          // Add the following attribute
+          
           data-directus={setAttr({
             collection: 'block_gallery',
             item: id,
@@ -25,7 +25,7 @@ export default function GallerySection({ id, tagline, headline, items = [] }) {
         {headline && (
           <h2
             className="headline"
-            // Add the following attribute
+           
             data-directus={setAttr({
               collection: 'block_gallery',
               item: id,
@@ -37,7 +37,7 @@ export default function GallerySection({ id, tagline, headline, items = [] }) {
           </h2>
         )}
         <div className="gallery-grid"
-            // Add the following attribute
+             
             data-directus={setAttr({
               collection: 'block_gallery',
               item: id,
@@ -61,7 +61,7 @@ export default function GallerySection({ id, tagline, headline, items = [] }) {
         </div>
       </div>
 
-    // Leave the remaining same as before
+
     </section>
   );
 }
