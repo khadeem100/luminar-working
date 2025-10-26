@@ -2,10 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-// Add this import
+
 import { setAttr } from '../../lib/visual-editor.js';
 
-// Add `id` in the list of destructured props
+
 export default function HeroSection({ id, tagline, headline, description, image, layout, button_group = [] }) {
 
   return (
@@ -14,7 +14,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
         {layout === 'image_left' && image && (
           <div className="hero-image">
             <Image
-              src={`http://localhost:8055/assets/${image.id}`}
+              src={`https://luminar-edu.nl/assets/${image.id}`}
               alt={image.filename_download || 'Hero Image'}
               width={600}
               height={400}
@@ -34,7 +34,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
           {tagline && (
             <p 
               className="tagline"
-              // Add the following attribute
+             
               data-directus={(setAttr({ 
                 collection: 'block_hero', 
                 item: id, 
@@ -48,7 +48,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
           
           {headline && (
             <h1 
-              // Add the following attribute
+
               data-directus={(setAttr({ 
                 collection: 'block_hero', 
                 item: id, 
@@ -63,7 +63,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
           {description && (
             <p 
               className="description"
-              // Add the following attribute
+ 
               data-directus={(setAttr({ 
                 collection: 'block_hero', 
                 item: id, 
@@ -77,7 +77,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
 
           {button_group.length > 0 && (
             <div className="button-group" 
-              // Add the following attribute
+          
               data-directus={(setAttr({ 
                 collection: 'block_hero', 
                 item: id, 
@@ -101,7 +101,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
         {(layout === 'image_right' || layout === 'image_center' || layout === null) && image && (
           <div className="hero-image">
             <Image
-              src={`https://luminar-edu.nl/assets/${image.id}`}
+              src={`https://luminar-edu.nl//assets/${image.id}`}
               alt={image.filename_download || 'Hero Image'}
               width={600}
               height={400}
@@ -118,7 +118,7 @@ export default function HeroSection({ id, tagline, headline, description, image,
         )}
       </div>
 
-      {/* Leave the remaining same as before */}
+      
 
     </section>
   );
